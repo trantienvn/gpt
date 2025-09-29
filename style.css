@@ -215,6 +215,11 @@ body {
 
 #send-btn svg { width: 20px; height: 20px; }
 
+#send-btn.generating .send-icon { display: none; }
+#send-btn.generating .stop-icon { display: block; }
+#send-btn:not(.generating) .send-icon { display: block; }
+#send-btn:not(.generating) .stop-icon { display: none; }
+
 /* Modal, Responsive, etc. */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
 .modal.active { display: flex; justify-content: center; align-items: center; }
@@ -305,6 +310,156 @@ input:checked + .slider:before { transform: translateX(22px); }
 /* =================================================================
    CSS ĐÃ CÓ VÀ ĐÃ LÀM ĐÚNG THEO YÊU CẦU CỦA BẠN
    ================================================================= */
+
+/* Styles cho media trong chat */
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.media-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.chat-media {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    cursor: pointer;
+    object-fit: cover;
+}
+
+video.chat-media {
+    cursor: default;
+}
+
+/* Style cho nút upload */
+#upload-btn {
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+#upload-btn:hover {
+    background-color: var(--bg-bot-message);
+}
+
+/* Điều chỉnh padding cho input để tránh chồng lên nút upload */
+#user-input {
+    padding-left: 3.5rem !important;
+}
+
+/* Styles cho file preview */
+#file-preview {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.preview-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.preview-item {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--bg-bot-message);
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.video-preview svg {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+}
+
+.video-preview span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.remove-file {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    padding: 0;
+    line-height: 1;
+}
+
+.remove-file:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Styles cho drag & drop */
+#user-input.drag-over {
+    border-color: var(--accent-color);
+    background-color: var(--bg-bot-message);
+}
+
+/* Animation cho preview */
+.preview-item {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 /* Wrapper để định vị nút copy, KHÔNG CUỘN */
 .code-wrapper {

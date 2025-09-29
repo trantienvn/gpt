@@ -5,8 +5,8 @@
 marked.use({
     renderer: {
         code(code, language) {
-            const codeString = String(code.text); 
-            
+            const codeString = String(code.text);
+
             let highlightedCode;
             if (language && hljs.getLanguage(language)) {
                 highlightedCode = hljs.highlight(codeString, { language: language }).value;
@@ -31,20 +31,20 @@ marked.use({
 // =================================================================
 // LẮNG NGHE SỰ KIỆN CLICK NÚT COPY - LOẠI BỎ XỬ LÝ NÚT WORD WRAP
 // =================================================================
-document.addEventListener('click', function(event) {
+document.addEventListener('click', function (event) {
     const copyButton = event.target.closest('.copy-btn');
     if (copyButton) {
         const wrapper = copyButton.closest('.code-wrapper');
         const codeBlock = wrapper.querySelector('pre code');
-        
+
         if (codeBlock) {
-            const codeText = codeBlock.textContent; 
+            const codeText = codeBlock.textContent;
 
             navigator.clipboard.writeText(codeText).then(() => {
                 const buttonText = copyButton.querySelector('span');
                 buttonText.textContent = 'Đã copy!';
                 copyButton.classList.add('copied');
-                
+
                 setTimeout(() => {
                     buttonText.textContent = 'Copy';
                     copyButton.classList.remove('copied');
@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelSelect = document.getElementById('model-select');
     const apiProviderSelect = document.getElementById('api-provider-select');
     const sendBtn = document.getElementById('send-btn');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('file-input');
 
     // Modal Elements
     const settingsModal = document.getElementById('settings-modal');
@@ -234,22 +236,58 @@ document.addEventListener('DOMContentLoaded', () => {
         renderConversationList();
     }
 
-    function addMessageToUI(message, type) {
+    function addMessageToUI(message, type, mediaFiles = []) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${type}-message`);
+        
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('avatar');
         avatarDiv.innerHTML = type === 'user' ? userAvatarSVG : botAvatarSVG;
-        const textContentDiv = document.createElement('div');
-        textContentDiv.classList.add('text-content');
-        textContentDiv.innerHTML = type === 'bot'
-            ? marked.parse(message)
-            : message.replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/\n/g, '<br>');
         messageDiv.appendChild(avatarDiv);
-        messageDiv.appendChild(textContentDiv);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('content');
+
+        // Thêm phần text message nếu có
+        if (message) {
+            const textContentDiv = document.createElement('div');
+            textContentDiv.classList.add('text-content');
+            textContentDiv.innerHTML = type === 'bot'
+                ? marked.parse(message)
+                : message.replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/\n/g, '<br>');
+            contentDiv.appendChild(textContentDiv);
+        }
+
+        // Thêm phần media nếu có
+        if (mediaFiles.length > 0) {
+            const mediaContentDiv = document.createElement('div');
+            mediaContentDiv.classList.add('media-content');
+            
+            mediaFiles.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.classList.add('chat-media');
+                    img.addEventListener('click', () => {
+                        window.open(img.src, '_blank');
+                    });
+                    mediaContentDiv.appendChild(img);
+                } else if (file.type.startsWith('video/')) {
+                    const video = document.createElement('video');
+                    video.src = URL.createObjectURL(file);
+                    video.classList.add('chat-media');
+                    video.controls = true;
+                    mediaContentDiv.appendChild(video);
+                }
+            });
+            
+            contentDiv.appendChild(mediaContentDiv);
+        }
+
+        messageDiv.appendChild(contentDiv);
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
         return messageDiv;
@@ -298,26 +336,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleGoogleRequest(currentConv, botTextContent, botMessageElement) {
         try {
-            const context = currentConv.history.slice(-10);
+            // Chỉ lấy phần text history để gửi lên API
+            const context = currentConv.history.filter(msg => msg.parts[0].text).slice(-10);
             const apiKey = appState.apiKeys.google;
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelSelect.value}:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: context }) });
-            if (!response.ok) throw new Error((await response.json()).error.message);
-            let data = await response.json();
-            if (Array.isArray(data)) {
-                data = data[0];
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelSelect.value}:streamGenerateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: context })
+            });            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Unknown API error');
             }
-            const fullResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (fullResponse) {
-                botTextContent.innerHTML = marked.parse(fullResponse);
-                currentConv.history.push({ role: 'model', parts: [{ text: fullResponse }] });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponseText = '';
+
+            // Tối ưu: Lập lịch để cập nhật Markdown
+            const updateInterval = 50; // Cập nhật sau mỗi 50ms
+            let lastRenderedText = '';
+            const intervalId = setInterval(() => {
+                if (lastRenderedText !== fullResponseText) {
+                    botTextContent.innerHTML = marked.parse(fullResponseText);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    lastRenderedText = fullResponseText;
+                }
+            }, updateInterval);
+
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    try {
+                        // Tối ưu: Chỉ nối chuỗi vào biến fullResponseText
+                        const jsonString = decoder.decode(value, { stream: true });
+                        const data = JSON.parse(jsonString.replace(/^[\[,]/, ''));
+                        if (data.candidates && data.candidates[0]?.content?.parts?.length > 0) {
+                            const textChunk = data.candidates[0].content.parts[0].text || '';
+                            fullResponseText += textChunk;
+                        }
+                    } catch (error) {
+                        console.error('Lỗi khi xử lý JSON chunk:', error);
+                    }
+                }
+            } finally {
+                clearInterval(intervalId); // Quan trọng: Dừng interval khi luồng kết thúc
+                reader.releaseLock();
+            }
+
+            // Sau khi luồng kết thúc, cập nhật toàn bộ nội dung với Markdown một lần duy nhất
+            if (fullResponseText) {
+                botTextContent.innerHTML = marked.parse(fullResponseText);
+                currentConv.history.push({ role: 'model', parts: [{ text: fullResponseText }] });
                 saveState();
             } else {
-                throw new Error('Invalid response structure from API.');
+                throw new Error('No response received from API or response was empty.');
             }
+
         } catch (error) {
             botTextContent.textContent = `Error: ${error.message}`;
             botMessageElement.classList.add('error-message');
+            console.error('handleGoogleRequest failed:', error);
         }
     }
 
@@ -325,17 +407,59 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const apiKey = appState.apiKeys.openai;
             const apiUrl = 'http://localhost:1234/v1/chat/completions';
-            const messages = currentConv.history.map(h => ({ role: h.role === 'model' ? 'assistant' : h.role, content: h.parts[0].text }));
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify({ model: modelSelect.value, messages: messages, stream: false }) });
-            if (!response.ok) { throw new Error((await response.json()).error.message); }
-            const data = await response.json();
-            const fullResponse = data?.choices?.[0]?.message?.content;
+            const messages = currentConv.history.map(h => ({
+                role: h.role === 'model' ? 'assistant' : h.role,
+                content: h.parts[0].text
+            }));
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: modelSelect.value,
+                    messages: messages,
+                    stream: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error((await response.json()).error.message);
+            }
+
+            const reader = response.body.getReader();
+            let fullResponse = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = new TextDecoder().decode(value);
+                const lines = chunk.split('\n').filter(line => line.trim()).map(line => line.replace(/^data: /, ''));
+
+                for (const line of lines) {
+                    if (line === '[DONE]') continue;
+                    try {
+                        const data = JSON.parse(line);
+                        const content = data.choices?.[0]?.delta?.content || '';
+                        if (content) {
+                            fullResponse += content;
+                            botTextContent.innerHTML = marked.parse(fullResponse);
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing chunk:', e);
+                    }
+                }
+            }
+
             if (fullResponse) {
-                botTextContent.textContent = fullResponse;
                 currentConv.history.push({ role: 'model', parts: [{ text: fullResponse }] });
                 saveState();
             } else {
-                throw new Error('Invalid response structure from API.');
+                throw new Error('No response received from API.');
             }
         } catch (error) {
             botTextContent.textContent = `Error: ${error.message}`;
@@ -406,12 +530,200 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyStatus.className = status ? `status-${status}` : '';
     }
 
+    // Xử lý upload file
+    let selectedFiles = [];
+
+    function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        selectedFiles = selectedFiles.concat(files);
+        
+        // Hiển thị preview của files đã chọn
+        const message = selectedFiles.map(file => file.name).join('\n');
+        userInput.value = message;
+        sendBtn.classList.add('visible');
+    }
+
+    async function handleChatSubmitWithFiles(e) {
+        e.preventDefault();
+        const userMessageText = userInput.value.trim();
+        const currentConv = appState.conversations[appState.currentConversationId];
+        
+        if (!userMessageText && selectedFiles.length === 0) return;
+
+        if (currentConv.history.length === 0) {
+            currentConv.title = userMessageText || 'Media Message';
+            renderConversationList();
+            chatBox.innerHTML = '';
+        }
+
+        // Hiển thị tin nhắn với media
+        addMessageToUI(userMessageText, 'user', selectedFiles);
+        
+        // Lưu tin nhắn vào history với cấu trúc tương thích API
+        if (userMessageText) {
+            currentConv.history.push({ 
+                role: 'user', 
+                parts: [{ text: userMessageText }]
+            });
+        }
+
+        // Lưu thông tin media riêng
+        if (selectedFiles.length > 0) {
+            currentConv.mediaHistory = currentConv.mediaHistory || [];
+            currentConv.mediaHistory.push({
+                timestamp: Date.now(),
+                files: selectedFiles.map(file => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size
+                }))
+            });
+        }
+
+        // Reset input và files
+        userInput.value = '';
+        selectedFiles = [];
+        fileInput.value = '';
+        sendBtn.classList.remove('visible');
+        
+        saveState();
+
+        // Xử lý phản hồi từ AI nếu có tin nhắn văn bản
+        if (userMessageText) {
+            const botMessageElement = addMessageToUI('...', 'bot');
+            const botTextContent = botMessageElement.querySelector('.text-content');
+            const provider = appState.apiProvider;
+            
+            if (provider === 'google') {
+                handleGoogleRequest(currentConv, botTextContent, botMessageElement);
+            } else if (provider === 'openai') {
+                handleOpenAIRequest(currentConv, botTextContent, botMessageElement);
+            }
+        }
+    }
+
+    // Xử lý paste
+    async function handlePaste(e) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        
+        for (const item of items) {
+            if (item.type.indexOf('image') !== -1 || item.type.indexOf('video') !== -1) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    selectedFiles.push(file);
+                    updateFilePreview();
+                }
+            }
+        }
+    }
+
+    // Xử lý drag & drop
+    function handleDragOver(e) {
+        e.preventDefault();
+        userInput.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        userInput.classList.remove('drag-over');
+    }
+
+    async function handleDrop(e) {
+        e.preventDefault();
+        userInput.classList.remove('drag-over');
+        
+        const items = [];
+        if (e.dataTransfer.items) {
+            for (let i = 0; i < e.dataTransfer.items.length; i++) {
+                const item = e.dataTransfer.items[i];
+                if (item.type.indexOf('image') !== -1 || item.type.indexOf('video') !== -1) {
+                    const file = item.getAsFile();
+                    items.push(file);
+                }
+            }
+        } else {
+            for (let i = 0; i < e.dataTransfer.files.length; i++) {
+                const file = e.dataTransfer.files[i];
+                if (file.type.indexOf('image') !== -1 || file.type.indexOf('video') !== -1) {
+                    items.push(file);
+                }
+            }
+        }
+
+        if (items.length > 0) {
+            selectedFiles = selectedFiles.concat(items);
+            updateFilePreview();
+        }
+    }
+
+    // Cập nhật preview của files
+    function updateFilePreview() {
+        if (selectedFiles.length > 0) {
+            const fileNames = selectedFiles.map(file => file.name).join(', ');
+            const previewDiv = document.getElementById('file-preview') || document.createElement('div');
+            previewDiv.id = 'file-preview';
+            
+            let previewContent = '<div class="preview-files">';
+            selectedFiles.forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const imgUrl = URL.createObjectURL(file);
+                    previewContent += `
+                        <div class="preview-item">
+                            <img src="${imgUrl}" alt="${file.name}">
+                            <button class="remove-file" data-index="${index}">&times;</button>
+                        </div>`;
+                } else if (file.type.startsWith('video/')) {
+                    previewContent += `
+                        <div class="preview-item">
+                            <div class="video-preview">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                </svg>
+                                <span>${file.name}</span>
+                            </div>
+                            <button class="remove-file" data-index="${index}">&times;</button>
+                        </div>`;
+                }
+            });
+            previewContent += '</div>';
+            
+            previewDiv.innerHTML = previewContent;
+            
+            if (!document.getElementById('file-preview')) {
+                chatForm.insertBefore(previewDiv, userInput);
+            }
+
+            // Add event listeners for remove buttons
+            previewDiv.querySelectorAll('.remove-file').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    selectedFiles.splice(index, 1);
+                    updateFilePreview();
+                });
+            });
+        } else {
+            const previewDiv = document.getElementById('file-preview');
+            if (previewDiv) {
+                previewDiv.remove();
+            }
+        }
+        
+        // Show send button if there are files or text
+        sendBtn.classList.toggle('visible', selectedFiles.length > 0 || userInput.value.trim() !== '');
+    }
+
     // --- Event Listeners ---
     apiProviderSelect.addEventListener('change', updateProviderModels);
     userInput.addEventListener('input', () => { sendBtn.classList.toggle('visible', userInput.value.trim() !== ''); });
-    userInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) handleChatSubmit(e); });
+    userInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) handleChatSubmitWithFiles(e); });
+    userInput.addEventListener('paste', handlePaste);
+    userInput.addEventListener('dragover', handleDragOver);
+    userInput.addEventListener('dragleave', handleDragLeave);
+    userInput.addEventListener('drop', handleDrop);
     apiKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') validateApiKey(false); });
-    chatForm.addEventListener('submit', handleChatSubmit);
+    chatForm.addEventListener('submit', handleChatSubmitWithFiles);
     newChatBtn.addEventListener('click', () => { startNewConversation(true); });
     sidebarToggleBtn.addEventListener('click', toggleSidebar);
     settingsBtn.addEventListener('click', openSettingsModal);
@@ -419,6 +731,10 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteAllBtn.addEventListener('click', deleteAllConversations);
     themeToggle.addEventListener('change', () => { setTheme(themeToggle.checked ? 'dark' : 'light'); saveState(); });
     window.addEventListener('click', e => { if (e.target === settingsModal) closeSettingsModal(); });
+    
+    // File upload listeners
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
 
     // --- Initial Load ---
     loadState();
