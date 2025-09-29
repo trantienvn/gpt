@@ -1,0 +1,366 @@
+:root {
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --bg-app: #f4f7fa;
+    --bg-sidebar: #ffffff;
+    --bg-chat: #ffffff;
+    --bg-input: #ffffff;
+    --bg-user-message: #4a80ee;
+    --bg-bot-message: #eef1f5;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b7280;
+    --text-user-message: #ffffff;
+    --text-bot-message: #1a1a1a;
+    --border-color: #e5e7eb;
+    --accent-color: #4a80ee;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --error-text: #de4437;
+    --success-text: #18a34a;
+}
+
+[data-theme='dark'] {
+    --bg-app: #111827;
+    --bg-sidebar: #1f2937;
+    --bg-chat: #111827;
+    --bg-input: #374151;
+    --bg-user-message: #4a80ee;
+    --bg-bot-message: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --text-user-message: #ffffff;
+    --text-bot-message: #f9fafb;
+    --border-color: #374151;
+    --accent-color: #60a5fa;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --error-text: #f28b82;
+    --success-text: #81c995;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-layout { display: flex; height: 100%; background-color: var(--bg-app); }
+
+#sidebar {
+    width: 260px;
+    background-color: var(--bg-sidebar);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    transition: width 0.3s ease, padding 0.3s ease, transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+.app-layout.sidebar-collapsed #sidebar { width: 0; padding: 1rem 0; overflow: hidden; border-right: none; }
+
+#sidebar-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem; }
+
+#new-chat-btn, #settings-btn {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+#settings-btn { background-color: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); }
+#settings-btn:hover { background-color: var(--bg-app); }
+
+#conversation-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+#conversation-list li {
+    position: relative; /* Needed for absolute positioning of the delete button */
+    padding: 0.75rem 2rem 0.75rem 1rem; /* Add padding-right for the button */
+    border-radius: 8px; 
+    cursor: pointer; 
+    margin-bottom: 0.5rem; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    color: var(--text-secondary); 
+    font-weight: 500; 
+}
+
+.delete-conv-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 0.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+#conversation-list li:hover .delete-conv-btn {
+    opacity: 1;
+}
+
+.delete-conv-btn:hover {
+    background-color: var(--bg-app);
+    color: var(--error-text);
+}
+
+#conversation-list li.active { background-color: var(--accent-color); color: white; }
+
+.main-container { flex-grow: 1; display: flex; flex-direction: column; max-height: 100vh; position: relative; background-color: var(--bg-chat); }
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+#chat-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#model-select {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+.chat-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.chat-box {
+    flex-grow: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.welcome-message { text-align: center; margin: auto; color: var(--text-secondary); }
+.welcome-message h1 { font-size: 2rem; font-weight: 600; }
+
+.message { display: flex; gap: 1rem; max-width: 85%; align-items: flex-start; }
+.message .avatar { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; background-color: var(--accent-color); color: white; }
+.message .text-content { padding: 0.75rem 1.25rem; border-radius: 12px; line-height: 1.6; }
+
+.user-message { align-self: flex-end; flex-direction: row-reverse; }
+.user-message .text-content { background-color: var(--bg-user-message); color: var(--text-user-message); border-bottom-right-radius: 2px; }
+
+.bot-message { align-self: flex-start; }
+.bot-message .avatar { background-color: #19c37d; }
+.bot-message .text-content { background-color: var(--bg-bot-message); color: var(--text-bot-message); border-bottom-left-radius: 2px; }
+
+.error-message .text-content { background-color: var(--error-bg); color: var(--error-text); }
+
+.chat-form { position: relative; padding: 1rem; border-top: 1px solid var(--border-color); background-color: var(--bg-input); }
+#user-input { 
+    width: 100%; 
+    padding: 1rem 3.5rem 1rem 1.5rem; /* Add padding-right for button */
+    border: 1px solid var(--border-color); 
+    border-radius: 18px; 
+    background-color: var(--bg-input); 
+    color: var(--text-primary); 
+    font-size: 1rem; 
+    resize: none; 
+    box-sizing: border-box;
+}
+#send-btn {
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%) scale(0.8);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--accent-color);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#send-btn.visible {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
+#send-btn svg { width: 20px; height: 20px; }
+
+/* Modal, Responsive, etc. */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+.modal.active { display: flex; justify-content: center; align-items: center; }
+.modal-content { background-color: var(--bg-sidebar); padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; position: relative; }
+.close-btn { position: absolute; top: 1rem; right: 1.5rem; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+
+.setting-item { margin-bottom: 1.5rem; }
+.setting-item label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+.setting-item input, .setting-item select { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; background-color: var(--bg-input); color: var(--text-primary); box-sizing: border-box; }
+#api-key-status { margin-top: 0.5rem; font-size: 0.85rem; min-height: 1.2em; }
+.status-success { color: var(--success-text); }
+.status-error { color: var(--error-text); }
+
+.theme-switcher { display: flex; justify-content: space-between; align-items: center; }
+.switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; }
+input:checked + .slider { background-color: var(--accent-color); }
+input:checked + .slider:before { transform: translateX(22px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
+
+#delete-all-btn { width: 100%; padding: 0.75rem; border: 1px solid var(--error-text); color: var(--error-text); background: transparent; border-radius: 8px; cursor: pointer; }
+
+#sidebar-toggle-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#sidebar-toggle-btn:hover {
+    background-color: var(--bg-bot-message);
+}
+
+/* Markdown Styles */
+.text-content pre {
+    background-color: var(--bg-app);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.text-content code {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--bg-app);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.text-content pre code {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+}
+
+.text-content ul, .text-content ol {
+    padding-left: 1.5rem;
+}
+
+.text-content blockquote {
+    border-left: 3px solid var(--accent-color);
+    padding-left: 1rem;
+    margin-left: 0;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #sidebar { position: fixed; height: 100%; z-index: 1001; transform: translateX(-100%); }
+    .app-layout.sidebar-open #sidebar { transform: translateX(0); }
+    /* The button is now always visible, so this rule is not needed anymore */
+    .app-layout.sidebar-collapsed #sidebar { transform: translateX(-100%); }
+}
+/* =================================================================
+   CSS ĐÃ CÓ VÀ ĐÃ LÀM ĐÚNG THEO YÊU CẦU CỦA BẠN
+   ================================================================= */
+
+/* Wrapper để định vị nút copy, KHÔNG CUỘN */
+.code-wrapper {
+    position: relative;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    /* Đảm bảo không có overflow trên wrapper này */
+    /* overflow: hidden;  <-- KHÔNG DÙNG CÁI NÀY NẾU KHÔNG CẦN THIẾT */
+}
+
+/* Khối <pre> bên trong, có thể CUỘN */
+.code-wrapper pre {
+    max-height: 300px; /* Ví dụ: Giới hạn chiều cao để khối code có thể cuộn dọc */
+    overflow: auto;    /* Quan trọng: Tạo thanh cuộn khi nội dung vượt quá kích thước */
+    /* overflow-x: auto; nếu chỉ muốn cuộn ngang */
+    /* overflow-y: auto; nếu chỉ muốn cuộn dọc */
+
+    padding-top: 2.5em !important; /* Đủ chỗ cho nút copy */
+    margin: 0 !important;
+    background-color: #2d2d2d; /* Ví dụ màu nền cho code */
+    color: #f8f8f2;
+    padding: 1.2em;
+    border-radius: 6px;
+}
+
+/* Nút Copy, cố định trong wrapper, KHÔNG CUỘN cùng nội dung pre */
+.copy-btn {
+    position: absolute; /* Quan trọng: Đặt tuyệt đối trong .code-wrapper */
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #3e434e;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    z-index: 10; /* Đảm bảo nút nằm trên code nếu có trường hợp che phủ */
+}
+
+/* Các style khác cho nút và hover */
+.code-wrapper:hover .copy-btn {
+    opacity: 1;
+}
+
+.copy-btn:hover {
+    background-color: #555c69;
+}
+
+.copy-btn.copied {
+    background-color: #28a745;
+    color: white;
+    opacity: 1;
+}

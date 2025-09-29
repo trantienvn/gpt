@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Chat</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar">
+            <button id="new-chat-btn">+ Trò chuyện mới</button>
+            <ul id="conversation-list"></ul>
+            <div id="sidebar-footer">
+                <button id="settings-btn">Cài đặt</button>
+            </div>
+        </div>
+        <div class="main-container">
+            <div class="chat-header">
+                <button id="sidebar-toggle-btn">☰</button>
+                <h2 id="chat-title">New Conversation</h2>
+                <select id="model-select"></select>
+            </div>
+            <div class="chat-container">
+                <div class="chat-box" id="chat-box">
+                    <!-- Messages will be added here by JavaScript -->
+                </div>
+                <form class="chat-form" id="chat-form">
+                    <textarea type="text" id="user-input" placeholder="Nhập tin nhắn của bạn..." autocomplete="off"></textarea>
+                    <button type="submit" id="send-btn" title="Gửi tin nhắn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Cài đặt</h2>
+            <div class="setting-item">
+                <label for="api-provider-select">Nhà cung cấp API</label>
+                <select id="api-provider-select">
+                    <option value="google">Google AI</option>
+                    <option value="openai">OpenAI</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="api-key-modal">API Key</label>
+                <input type="text" id="api-key-modal" autocomplete="off" placeholder="Nhập API Key của bạn">
+                <span id="api-key-status"></span>
+            </div>
+             <div class="setting-item theme-switcher">
+                <label>Giao diện tối</label>
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle-checkbox">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <button id="delete-all-btn">Xóa Toàn Bộ Dữ Liệu</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
