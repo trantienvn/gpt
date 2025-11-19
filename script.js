@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const welcome = document.createElement('div');
             welcome.classList.add('welcome-message');
             const welcomeHeading = document.createElement('h1');
-            welcomeHeading.textContent = 'Gemini';
+            welcomeHeading.textContent = 'TranTienChat';
             welcome.appendChild(welcomeHeading);
             chatBox.appendChild(welcome);
         }
@@ -331,6 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
             handleGoogleRequest(currentConv, botTextContent, botMessageElement);
         } else if (provider === 'openai') {
             handleOpenAIRequest(currentConv, botTextContent, botMessageElement);
+        } else if (provider === 'local') {
+            handleOpenAIRequest(currentConv, botTextContent, botMessageElement, true);
         }
     }
 
@@ -373,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         // Tối ưu: Chỉ nối chuỗi vào biến fullResponseText
                         const jsonString = decoder.decode(value, { stream: true });
-                        const data = JSON.parse(jsonString.replace(/^[\[,]/, ''));
+                        const data = JSON.parse(jsonString.replace(/,$/, '').replace(/^[\[,]/, ''));
                         if (data.candidates && data.candidates[0]?.content?.parts?.length > 0) {
                             const textChunk = data.candidates[0].content.parts[0].text || '';
                             fullResponseText += textChunk;
@@ -403,10 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function handleOpenAIRequest(currentConv, botTextContent, botMessageElement) {
+    async function handleOpenAIRequest(currentConv, botTextContent, botMessageElement, islocal = false) {
+        const Url = islocal ? 'http://localhost/' : 'https://api.openai.com/v1/';
         try {
-            const apiKey = appState.apiKeys.openai;
-            const apiUrl = 'http://localhost:1234/v1/chat/completions';
+            const apiKey = islocal ? '' : appState.apiKeys.openai;
+            const apiUrl = `${Url}chat/completions`;
             const messages = currentConv.history.map(h => ({
                 role: h.role === 'model' ? 'assistant' : h.role,
                 content: h.parts[0].text
@@ -479,9 +482,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (provider === 'google') {
             validationUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
             headers = {};
-        } else { // openai
-            validationUrl = 'http://localhost:1234/v1/models';
+        } else if (provider === 'openai'){ // openai
+            validationUrl = 'http://api.openai.com/v1/models';
             headers = { 'Authorization': `Bearer ${apiKey}` };
+        } else { // local
+            validationUrl = 'http://localhost:1234/v1/models';
+            headers = {};
         }
         try {
             const response = await fetch(validationUrl, { headers });
@@ -598,6 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleGoogleRequest(currentConv, botTextContent, botMessageElement);
             } else if (provider === 'openai') {
                 handleOpenAIRequest(currentConv, botTextContent, botMessageElement);
+            } else if (provider === 'local') {
+                handleOpenAIRequest(currentConv, botTextContent, botMessageElement, true);
             }
         }
     }
