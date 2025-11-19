@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessageToUI(message, type, mediaFiles = []) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${type}-message`);
-        
+
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('avatar');
         avatarDiv.innerHTML = type === 'user' ? userAvatarSVG : botAvatarSVG;
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mediaFiles.length > 0) {
             const mediaContentDiv = document.createElement('div');
             mediaContentDiv.classList.add('media-content');
-            
+
             mediaFiles.forEach(file => {
                 if (file.type.startsWith('image/')) {
                     const img = document.createElement('img');
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mediaContentDiv.appendChild(video);
                 }
             });
-            
+
             contentDiv.appendChild(mediaContentDiv);
         }
 
@@ -327,88 +327,40 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         const botMessageElement = addMessageToUI('...', 'bot');
         const botTextContent = botMessageElement.querySelector('.text-content');
-        if (provider === 'google') {
-            handleGoogleRequest(currentConv, botTextContent, botMessageElement);
-        } else if (provider === 'openai') {
-            handleOpenAIRequest(currentConv, botTextContent, botMessageElement);
-        } else if (provider === 'local') {
-            handleOpenAIRequest(currentConv, botTextContent, botMessageElement, true);
-        }
+
+        handleOpenAIRequest(currentConv, botTextContent, botMessageElement, provider === 'local');
+
     }
 
-    async function handleGoogleRequest(currentConv, botTextContent, botMessageElement) {
-        try {
-            // Chỉ lấy phần text history để gửi lên API
-            const context = currentConv.history.filter(msg => msg.parts[0].text).slice(-10);
-            const apiKey = appState.apiKeys.google;
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelSelect.value}:streamGenerateContent?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: context })
-            });            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Unknown API error');
-            }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullResponseText = '';
 
-            // Tối ưu: Lập lịch để cập nhật Markdown
-            const updateInterval = 50; // Cập nhật sau mỗi 50ms
-            let lastRenderedText = '';
-            const intervalId = setInterval(() => {
-                if (lastRenderedText !== fullResponseText) {
-                    botTextContent.innerHTML = marked.parse(fullResponseText);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                    lastRenderedText = fullResponseText;
-                }
-            }, updateInterval);
-
-            try {
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-
-                    try {
-                        // Tối ưu: Chỉ nối chuỗi vào biến fullResponseText
-                        const jsonString = decoder.decode(value, { stream: true });
-                        const data = JSON.parse(jsonString.replace(/,$/, '').replace(/^[\[,]/, ''));
-                        if (data.candidates && data.candidates[0]?.content?.parts?.length > 0) {
-                            const textChunk = data.candidates[0].content.parts[0].text || '';
-                            fullResponseText += textChunk;
-                        }
-                    } catch (error) {
-                        console.error('Lỗi khi xử lý JSON chunk:', error);
-                    }
-                }
-            } finally {
-                clearInterval(intervalId); // Quan trọng: Dừng interval khi luồng kết thúc
-                reader.releaseLock();
-            }
-
-            // Sau khi luồng kết thúc, cập nhật toàn bộ nội dung với Markdown một lần duy nhất
-            if (fullResponseText) {
-                botTextContent.innerHTML = marked.parse(fullResponseText);
-                currentConv.history.push({ role: 'model', parts: [{ text: fullResponseText }] });
-                saveState();
-            } else {
-                throw new Error('No response received from API or response was empty.');
-            }
-
-        } catch (error) {
-            botTextContent.textContent = `Error: ${error.message}`;
-            botMessageElement.classList.add('error-message');
-            console.error('handleGoogleRequest failed:', error);
+    function getEndPointUrl(data) {
+        switch (data ?? appState.apiProvider) {
+            case 'google':
+                return `https://generativelanguage.googleapis.com/v1beta/openai/`;
+            case 'openai':
+                return `https://api.openai.com/v1/`;
+            case 'local':
+                return `http://localhost/v1/`;
+            default:
+                throw new Error('Unsupported API provider');
         }
     }
-
     async function handleOpenAIRequest(currentConv, botTextContent, botMessageElement, islocal = false) {
-        const Url = islocal ? 'http://localhost/' : 'https://api.openai.com/v1/';
+        const Url = getEndPointUrl();
         try {
-            const apiKey = islocal ? '' : appState.apiKeys.openai;
+            const apiKey = () => {
+                switch (appState.apiProvider) {
+                    case 'google':
+                        return appState.apiKeys.google;
+                    case 'openai':
+                        return appState.apiKeys.openai;
+                    case 'local':
+                        return appState.apiKeys.openai;
+                    default:
+                        throw new Error('Unsupported API provider');
+                }
+            }
             const apiUrl = `${Url}chat/completions`;
             const messages = currentConv.history.map(h => ({
                 role: h.role === 'model' ? 'assistant' : h.role,
@@ -419,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+                    'Authorization': `Bearer ${apiKey()}`
                 },
                 body: JSON.stringify({
                     model: modelSelect.value,
@@ -447,10 +399,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const data = JSON.parse(line);
                         const content = data.choices?.[0]?.delta?.content || '';
+
                         if (content) {
+                            // 1. KIỂM TRA VỊ TRÍ TRƯỚC KHI CẬP NHẬT
+                            // Tính khoảng cách từ vị trí hiện tại đến đáy
+                            const distanceToBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight;
+
+                            // Nếu khoảng cách nhỏ hơn 100px, coi như người dùng đang ở đáy (đang theo dõi stream)
+                            const isUserAtBottom = distanceToBottom < 100;
+
+                            // 2. CẬP NHẬT NỘI DUNG
                             fullResponse += content;
                             botTextContent.innerHTML = marked.parse(fullResponse);
-                            chatBox.scrollTop = chatBox.scrollHeight;
+
+                            // 3. CHỈ TỰ ĐỘNG CUỘN NẾU NGƯỜI DÙNG ĐANG Ở ĐÁY
+                            if (isUserAtBottom) {
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
                         }
                     } catch (e) {
                         console.error('Error parsing chunk:', e);
@@ -479,27 +444,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         setApiStatus('Validating...', '');
         let validationUrl, headers;
-        if (provider === 'google') {
-            validationUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-            headers = {};
-        } else if (provider === 'openai'){ // openai
-            validationUrl = 'http://api.openai.com/v1/models';
-            headers = { 'Authorization': `Bearer ${apiKey}` };
-        } else { // local
-            validationUrl = 'http://localhost:1234/v1/models';
-            headers = {};
-        }
+        validationUrl = `${getEndPointUrl(provider)}models`;
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        };
         try {
             const response = await fetch(validationUrl, { headers });
             if (response.ok) {
                 setApiStatus('API Key is valid.', 'success');
                 appState.apiKeys[provider] = apiKey;
                 const data = await response.json();
-                if (provider === 'google') {
-                    populateModels(data.models, true);
-                } else {
-                    populateModels(data.data, false);
-                }
+                // if (provider === 'google') {
+                //     populateModels(data.models, true);
+                // } else {
+                populateModels(data.data, false);
+                // }
                 saveState();
             } else {
                 setApiStatus(`Error: ${(await response.json()).error.message}`, 'error');
@@ -513,11 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedModel = appState.selectedModel;
         modelSelect.innerHTML = '';
         let modelsToPopulate = [];
-        if (isGoogle) {
-            modelsToPopulate = models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
-        } else { // Is OpenAI
-            modelsToPopulate = models.filter(m => m.id).sort((a, b) => a.id.localeCompare(b.id));
-        }
+
+        modelsToPopulate = models.filter(m => m.id).sort((a, b) => a.id.localeCompare(b.id));
+
         modelsToPopulate.forEach(m => {
             const option = document.createElement('option');
             const modelId = isGoogle ? m.name.replace('models/', '') : m.id;
@@ -542,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         selectedFiles = selectedFiles.concat(files);
-        
+
         // Hiển thị preview của files đã chọn
         const message = selectedFiles.map(file => file.name).join('\n');
         userInput.value = message;
@@ -553,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const userMessageText = userInput.value.trim();
         const currentConv = appState.conversations[appState.currentConversationId];
-        
+
         if (!userMessageText && selectedFiles.length === 0) return;
 
         if (currentConv.history.length === 0) {
@@ -564,11 +522,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Hiển thị tin nhắn với media
         addMessageToUI(userMessageText, 'user', selectedFiles);
-        
+
         // Lưu tin nhắn vào history với cấu trúc tương thích API
         if (userMessageText) {
-            currentConv.history.push({ 
-                role: 'user', 
+            currentConv.history.push({
+                role: 'user',
                 parts: [{ text: userMessageText }]
             });
         }
@@ -591,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedFiles = [];
         fileInput.value = '';
         sendBtn.classList.remove('visible');
-        
+
         saveState();
 
         // Xử lý phản hồi từ AI nếu có tin nhắn văn bản
@@ -599,21 +557,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const botMessageElement = addMessageToUI('...', 'bot');
             const botTextContent = botMessageElement.querySelector('.text-content');
             const provider = appState.apiProvider;
-            
-            if (provider === 'google') {
-                handleGoogleRequest(currentConv, botTextContent, botMessageElement);
-            } else if (provider === 'openai') {
-                handleOpenAIRequest(currentConv, botTextContent, botMessageElement);
-            } else if (provider === 'local') {
-                handleOpenAIRequest(currentConv, botTextContent, botMessageElement, true);
-            }
+
+            handleOpenAIRequest(currentConv, botTextContent, botMessageElement, provider === 'local');
         }
     }
 
     // Xử lý paste
     async function handlePaste(e) {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-        
+
         for (const item of items) {
             if (item.type.indexOf('image') !== -1 || item.type.indexOf('video') !== -1) {
                 e.preventDefault();
@@ -640,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleDrop(e) {
         e.preventDefault();
         userInput.classList.remove('drag-over');
-        
+
         const items = [];
         if (e.dataTransfer.items) {
             for (let i = 0; i < e.dataTransfer.items.length; i++) {
@@ -671,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileNames = selectedFiles.map(file => file.name).join(', ');
             const previewDiv = document.getElementById('file-preview') || document.createElement('div');
             previewDiv.id = 'file-preview';
-            
+
             let previewContent = '<div class="preview-files">';
             selectedFiles.forEach((file, index) => {
                 if (file.type.startsWith('image/')) {
@@ -696,9 +648,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             previewContent += '</div>';
-            
+
             previewDiv.innerHTML = previewContent;
-            
+
             if (!document.getElementById('file-preview')) {
                 chatForm.insertBefore(previewDiv, userInput);
             }
@@ -717,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 previewDiv.remove();
             }
         }
-        
+
         // Show send button if there are files or text
         sendBtn.classList.toggle('visible', selectedFiles.length > 0 || userInput.value.trim() !== '');
     }
@@ -739,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteAllBtn.addEventListener('click', deleteAllConversations);
     themeToggle.addEventListener('change', () => { setTheme(themeToggle.checked ? 'dark' : 'light'); saveState(); });
     window.addEventListener('click', e => { if (e.target === settingsModal) closeSettingsModal(); });
-    
+
     // File upload listeners
     uploadBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect);
