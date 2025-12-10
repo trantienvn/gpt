@@ -421,13 +421,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Nếu sử dụng proxy, gửi request qua PHP
             if (appState.useProxy) {
-                response = await fetch('api-proxy.php', {
+                response = await fetch('https://trantien.id.vn/apps/proxy', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         url: apiUrl,
+                        method: 'POST',
                         headers: requestHeaders,
                         body: requestBody
                     })
@@ -536,8 +537,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     body: JSON.stringify({
                         url: validationUrl,
-                        headers: headers,
-                        body: {}
+                        method: 'GET',
+                        headers: headers
                     })
                 });
             } else {
