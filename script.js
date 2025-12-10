@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let customEndpointInput = document.getElementById('custom-endpoint-input');
     const apiKeyStatus = document.getElementById('api-key-status');
     const themeToggle = document.getElementById('theme-toggle-checkbox');
+    const useProxyCheckbox = document.getElementById('use-proxy-checkbox');
     const deleteAllBtn = document.getElementById('delete-all-btn');
 
     // --- SVG Icons ---
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         apiProvider: 'google',
         apiKeys: { google: null, openai: null },
         customEndpoint: '',
+        useProxy: false,
         selectedModel: null,
         currentConversationId: null,
         conversations: {},
@@ -117,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         apiProviderSelect.value = appState.apiProvider;
         apiKeyInput.value = appState.apiKeys[appState.apiProvider] || '';
+        useProxyCheckbox.checked = appState.useProxy || false;
         updateProviderModels();
         setTheme(appState.theme);
         renderConversationList();
@@ -130,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         appState.customEndpoint = customEndpointInput ? customEndpointInput.value.trim() : appState.customEndpoint;
         appState.selectedModel = modelSelect.value;
         appState.apiProvider = currentProvider;
+        appState.useProxy = useProxyCheckbox.checked;
         appState.theme = themeToggle.checked ? 'dark' : 'light';
         localStorage.setItem('geminiMultiChat', JSON.stringify(appState));
     }
@@ -402,18 +406,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 content: h.parts[0].text
             }));
 
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey()}`
-                },
-                body: JSON.stringify({
-                    model: modelSelect.value,
-                    messages: messages,
-                    stream: true
-                })
-            });
+            const requestBody = {
+                model: modelSelect.value,
+                messages: messages,
+                stream: true
+            };
+
+            const requestHeaders = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey()}`
+            };
+
+            let response;
+            
+            // Nếu sử dụng proxy, gửi request qua PHP
+            if (appState.useProxy) {
+                response = await fetch('api-proxy.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: apiUrl,
+                        headers: requestHeaders,
+                        body: requestBody
+                    })
+                });
+            } else {
+                // Gọi trực tiếp API
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: requestHeaders,
+                    body: JSON.stringify(requestBody)
+                });
+            }
 
             if (!response.ok) {
                 throw new Error((await response.json()).error.message);
@@ -497,8 +523,31 @@ document.addEventListener('DOMContentLoaded', () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
         };
+        
         try {
-            const response = await fetch(validationUrl, { headers });
+            let response;
+            
+            // Nếu sử dụng proxy, gửi request qua PHP
+            if (appState.useProxy) {
+                response = await fetch('https://trantien.id.vn/apps/proxy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: validationUrl,
+                        headers: headers,
+                        body: {}
+                    })
+                });
+            } else {
+                // Gọi trực tiếp API
+                response = await fetch(validationUrl, { 
+                    method: 'GET',
+                    headers 
+                });
+            }
+            
             if (response.ok) {
                 setApiStatus('API Key / Endpoint is valid.', 'success');
                 appState.apiKeys[provider] = apiKey;
@@ -743,6 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeModalBtn.addEventListener('click', closeSettingsModal);
     deleteAllBtn.addEventListener('click', deleteAllConversations);
     themeToggle.addEventListener('change', () => { setTheme(themeToggle.checked ? 'dark' : 'light'); saveState(); });
+    useProxyCheckbox.addEventListener('change', () => { saveState(); });
     window.addEventListener('click', e => { if (e.target === settingsModal) closeSettingsModal(); });
 
     // File upload listeners
