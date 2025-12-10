@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('settings-btn');
     const closeModalBtn = document.querySelector('.close-btn');
     const apiKeyInput = document.getElementById('api-key-modal');
+    // Optional custom endpoint input (may be created dynamically)
+    let customEndpointInput = document.getElementById('custom-endpoint-input');
     const apiKeyStatus = document.getElementById('api-key-status');
     const themeToggle = document.getElementById('theme-toggle-checkbox');
     const deleteAllBtn = document.getElementById('delete-all-btn');
@@ -93,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         theme: 'light',
         apiProvider: 'google',
         apiKeys: { google: null, openai: null },
+        customEndpoint: '',
         selectedModel: null,
         currentConversationId: null,
         conversations: {},
@@ -123,6 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveState() {
         const currentProvider = apiProviderSelect.value;
         appState.apiKeys[currentProvider] = apiKeyInput.value.trim();
+        // persist custom endpoint if present
+        appState.customEndpoint = customEndpointInput ? customEndpointInput.value.trim() : appState.customEndpoint;
         appState.selectedModel = modelSelect.value;
         appState.apiProvider = currentProvider;
         appState.theme = themeToggle.checked ? 'dark' : 'light';
@@ -299,7 +304,42 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyInput.value = appState.apiKeys[provider] || '';
         modelSelect.innerHTML = '';
 
-        if (appState.apiKeys[provider]) {
+        // If provider is custom, ensure there's an input for the endpoint
+        if (provider === 'custom') {
+            if (!customEndpointInput) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'custom-endpoint-group';
+                const label = document.createElement('label');
+                label.textContent = 'Custom API Endpoint';
+                customEndpointInput = document.createElement('input');
+                customEndpointInput.id = 'custom-endpoint-input';
+                customEndpointInput.type = 'text';
+                customEndpointInput.placeholder = 'https://your.custom.endpoint/';
+                customEndpointInput.style.width = '100%';
+                wrapper.appendChild(label);
+                wrapper.appendChild(customEndpointInput);
+                // Insert after apiKeyInput if possible
+                if (apiKeyInput && apiKeyInput.parentNode) {
+                    apiKeyInput.parentNode.insertBefore(wrapper, apiKeyInput.nextSibling);
+                } else if (settingsModal) {
+                    settingsModal.appendChild(wrapper);
+                }
+                customEndpointInput.addEventListener('change', () => { saveState(); validateApiKey(true); });
+            }
+            customEndpointInput.value = appState.customEndpoint || '';
+        } else {
+            // Remove custom input if it exists
+            if (customEndpointInput && customEndpointInput.parentNode) {
+                const parent = customEndpointInput.parentNode;
+                parent.parentNode.removeChild(parent);
+            }
+            customEndpointInput = null;
+        }
+
+        // Validate automatically if we have either an api key or a custom endpoint
+        if (provider === 'custom') {
+            if (customEndpointInput && customEndpointInput.value.trim()) validateApiKey(true);
+        } else if (appState.apiKeys[provider]) {
             validateApiKey(true);
         }
     }
@@ -342,6 +382,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `https://api.openai.com/v1/`;
             case 'local':
                 return `http://localhost/v1/`;
+            case 'custom':
+                if (!appState.customEndpoint) throw new Error('Custom endpoint is not set');
+                return appState.customEndpoint.endsWith('/') ? appState.customEndpoint : appState.customEndpoint + '/';
             default:
                 throw new Error('Unsupported API provider');
         }
@@ -350,16 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const Url = getEndPointUrl();
         try {
             const apiKey = () => {
-                switch (appState.apiProvider) {
-                    case 'google':
-                        return appState.apiKeys.google;
-                    case 'openai':
-                        return appState.apiKeys.openai;
-                    case 'local':
-                        return appState.apiKeys.openai;
-                    default:
-                        throw new Error('Unsupported API provider');
-                }
+                // Prefer stored key for the provider, fall back to current input value
+                return appState.apiKeys[appState.apiProvider] || apiKeyInput.value.trim() || '';
             }
             const apiUrl = `${Url}chat/completions`;
             const messages = currentConv.history.map(h => ({
@@ -438,13 +473,26 @@ document.addEventListener('DOMContentLoaded', () => {
     async function validateApiKey(isSilent = false) {
         const provider = apiProviderSelect.value;
         const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
+        // For non-custom providers, require an API key
+        if (provider !== 'custom' && !apiKey) {
             if (!isSilent) setApiStatus('Please enter an API key.', 'error');
             return;
         }
         setApiStatus('Validating...', '');
         let validationUrl, headers;
-        validationUrl = `${getEndPointUrl(provider)}models`;
+        // If custom provider, require endpoint to be present
+        if (provider === 'custom' && (!customEndpointInput || !customEndpointInput.value.trim())) {
+            if (!isSilent) setApiStatus('Please enter a custom endpoint.', 'error');
+            return;
+        }
+
+        try {
+            validationUrl = `${getEndPointUrl(provider)}models`;
+        } catch (err) {
+            setApiStatus(err.message, 'error');
+            return;
+        }
+
         headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
@@ -452,17 +500,22 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(validationUrl, { headers });
             if (response.ok) {
-                setApiStatus('API Key is valid.', 'success');
+                setApiStatus('API Key / Endpoint is valid.', 'success');
                 appState.apiKeys[provider] = apiKey;
                 const data = await response.json();
-                // if (provider === 'google') {
-                //     populateModels(data.models, true);
-                // } else {
-                populateModels(data.data, false);
-                // }
+                // Support different response shapes: { data: [...] } or { models: [...] } or direct array
+                const modelsPayload = data.data || data.models || data;
+                populateModels(modelsPayload, provider === 'google');
                 saveState();
             } else {
-                setApiStatus(`Error: ${(await response.json()).error.message}`, 'error');
+                let errMsg = 'Validation failed.';
+                try {
+                    const errJson = await response.json();
+                    errMsg = errJson.error?.message || errJson.message || JSON.stringify(errJson);
+                } catch (e) {
+                    // ignore parse error
+                }
+                setApiStatus(`Error: ${errMsg}`, 'error');
             }
         } catch (error) {
             setApiStatus('Network error or API is unreachable.', 'error');
