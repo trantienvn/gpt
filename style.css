@@ -1,5 +1,5 @@
 :root {
-    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-sans: 'San Francisco', Helvetica, Arial, san-serif;
     --bg-app: #f4f7fa;
     --bg-sidebar: #ffffff;
     --bg-chat: #ffffff;
@@ -44,7 +44,23 @@ body {
     overflow: hidden;
 }
 
-.app-layout { display: flex; height: 100%; background-color: var(--bg-app); }
+h3 {
+    font-weight: 600;
+}
+
+h3 strong {
+    font-weight: 650;
+}
+
+strong {
+    font-weight: 620;
+}
+
+.app-layout {
+    display: flex;
+    height: 100%;
+    background-color: var(--bg-app);
+}
 
 #sidebar {
     width: 260px;
@@ -57,11 +73,21 @@ body {
     flex-shrink: 0;
 }
 
-.app-layout.sidebar-collapsed #sidebar { width: 0; padding: 1rem 0; overflow: hidden; border-right: none; }
+.app-layout.sidebar-collapsed #sidebar {
+    width: 0;
+    padding: 1rem 0;
+    overflow: hidden;
+    border-right: none;
+}
 
-#sidebar-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem; }
+#sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
 
-#new-chat-btn, #settings-btn {
+#new-chat-btn,
+#settings-btn {
     width: 100%;
     padding: 0.75rem;
     border: none;
@@ -75,21 +101,38 @@ body {
     transition: background-color 0.2s;
     white-space: nowrap;
 }
-#settings-btn { background-color: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); }
-#settings-btn:hover { background-color: var(--bg-app); }
 
-#conversation-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+#settings-btn {
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+#settings-btn:hover {
+    background-color: var(--bg-app);
+}
+
+#conversation-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
 #conversation-list li {
-    position: relative; /* Needed for absolute positioning of the delete button */
-    padding: 0.75rem 2rem 0.75rem 1rem; /* Add padding-right for the button */
-    border-radius: 8px; 
-    cursor: pointer; 
-    margin-bottom: 0.5rem; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    color: var(--text-secondary); 
-    font-weight: 500; 
+    position: relative;
+    /* Needed for absolute positioning of the delete button */
+    padding: 0.75rem 2rem 0.75rem 1rem;
+    /* Add padding-right for the button */
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .delete-conv-btn {
@@ -116,9 +159,19 @@ body {
     color: var(--error-text);
 }
 
-#conversation-list li.active { background-color: var(--accent-color); color: white; }
+#conversation-list li.active {
+    background-color: var(--accent-color);
+    color: white;
+}
 
-.main-container { flex-grow: 1; display: flex; flex-direction: column; max-height: 100vh; position: relative; background-color: var(--bg-chat); }
+.main-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: 100vh;
+    position: relative;
+    background-color: var(--bg-chat);
+}
 
 .chat-header {
     display: flex;
@@ -149,7 +202,12 @@ body {
     font-size: 0.9rem;
 }
 
-.chat-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+.chat-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
 
 .chat-box {
     flex-grow: 1;
@@ -160,34 +218,93 @@ body {
     gap: 1.5rem;
 }
 
-.welcome-message { text-align: center; margin: auto; color: var(--text-secondary); }
-.welcome-message h1 { font-size: 2rem; font-weight: 600; }
+.welcome-message {
+    text-align: center;
+    margin: auto;
+    color: var(--text-secondary);
+}
 
-.message { display: flex; gap: 1rem; max-width: 85%; align-items: flex-start; }
-.message .avatar { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; background-color: var(--accent-color); color: white; }
-.message .text-content { padding: 0.75rem 1.25rem; border-radius: 12px; line-height: 1.6; }
+.welcome-message h1 {
+    font-size: 2rem;
+    font-weight: 600;
+}
 
-.user-message { align-self: flex-end; flex-direction: row-reverse; }
-.user-message .text-content { background-color: var(--bg-user-message); color: var(--text-user-message); border-bottom-right-radius: 2px; }
+.message {
+    display: flex;
+    gap: 1rem;
+    max-width: 85%;
+    align-items: flex-start;
+}
 
-.bot-message { align-self: flex-start; }
-.bot-message .avatar { background-color: #19c37d; }
-.bot-message .text-content { background-color: var(--bg-bot-message); color: var(--text-bot-message); border-bottom-left-radius: 2px; }
+.message .avatar {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    background-color: var(--accent-color);
+    color: white;
+}
 
-.error-message .text-content { background-color: var(--error-bg); color: var(--error-text); }
+.message .text-content {
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    line-height: 1.6;
+}
 
-.chat-form { position: relative; padding: 1rem; border-top: 1px solid var(--border-color); background-color: var(--bg-input); }
-#user-input { 
-    width: 100%; 
-    padding: 1rem 3.5rem 1rem 1.5rem; /* Add padding-right for button */
-    border: 1px solid var(--border-color); 
-    border-radius: 18px; 
-    background-color: var(--bg-input); 
-    color: var(--text-primary); 
-    font-size: 1rem; 
-    resize: none; 
+.user-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.user-message .text-content {
+    background-color: var(--bg-user-message);
+    color: var(--text-user-message);
+    border-bottom-right-radius: 2px;
+}
+
+.bot-message {
+    align-self: flex-start;
+}
+
+.bot-message .avatar {
+    background-color: #19c37d;
+}
+
+.bot-message .text-content {
+    background-color: var(--bg-bot-message);
+    color: var(--text-bot-message);
+    border-bottom-left-radius: 2px;
+}
+
+.error-message .text-content {
+    background-color: var(--error-bg);
+    color: var(--error-text);
+}
+
+.chat-form {
+    position: relative;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-input);
+}
+
+#user-input {
+    width: 100%;
+    padding: 1rem 3.5rem 1rem 1.5rem;
+    /* Add padding-right for button */
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 1rem;
+    resize: none;
     box-sizing: border-box;
 }
+
 #send-btn {
     position: absolute;
     right: 1.5rem;
@@ -213,40 +330,181 @@ body {
     transform: translateY(-50%) scale(1);
 }
 
-#send-btn svg { width: 20px; height: 20px; }
+#send-btn svg {
+    width: 20px;
+    height: 20px;
+}
 
-#send-btn.generating .send-icon { display: none; }
-#send-btn.generating .stop-icon { display: block; }
-#send-btn:not(.generating) .send-icon { display: block; }
-#send-btn:not(.generating) .stop-icon { display: none; }
+#send-btn.generating .send-icon {
+    display: none;
+}
+
+#send-btn.generating .stop-icon {
+    display: block;
+}
+
+#send-btn:not(.generating) .send-icon {
+    display: block;
+}
+
+#send-btn:not(.generating) .stop-icon {
+    display: none;
+}
 
 /* Modal, Responsive, etc. */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-.modal.active { display: flex; justify-content: center; align-items: center; }
-.modal-content { background-color: var(--bg-sidebar); padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; position: relative; }
-.close-btn { position: absolute; top: 1rem; right: 1.5rem; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
 
-.setting-item { margin-bottom: 1.5rem; }
-.setting-item label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-.setting-item input, .setting-item select { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; background-color: var(--bg-input); color: var(--text-primary); box-sizing: border-box; }
-.checkbox-label { display: flex; align-items: center; cursor: pointer; }
-.checkbox-label input[type="checkbox"] { margin-right: 0.5rem; cursor: pointer; width: auto; }
-.checkbox-label span { font-weight: normal; }
-#api-key-status { margin-top: 0.5rem; font-size: 0.85rem; min-height: 1.2em; }
-.status-success { color: var(--success-text); }
-.status-error { color: var(--error-text); }
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-.theme-switcher { display: flex; justify-content: space-between; align-items: center; }
-.switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
-.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; }
-input:checked + .slider { background-color: var(--accent-color); }
-input:checked + .slider:before { transform: translateX(22px); }
-.slider.round { border-radius: 34px; }
-.slider.round:before { border-radius: 50%; }
+.modal-content {
+    background-color: var(--bg-sidebar);
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
 
-#delete-all-btn { width: 100%; padding: 0.75rem; border: 1px solid var(--error-text); color: var(--error-text); background: transparent; border-radius: 8px; cursor: pointer; }
+.close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.setting-item {
+    margin-bottom: 1.5rem;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.setting-item input,
+.setting-item select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    box-sizing: border-box;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 0.5rem;
+    cursor: pointer;
+    width: auto;
+}
+
+.checkbox-label span {
+    font-weight: normal;
+}
+
+#api-key-status {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+}
+
+.status-success {
+    color: var(--success-text);
+}
+
+.status-error {
+    color: var(--error-text);
+}
+
+.theme-switcher {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: var(--accent-color);
+}
+
+input:checked+.slider:before {
+    transform: translateX(22px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+#delete-all-btn {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--error-text);
+    color: var(--error-text);
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+}
 
 #sidebar-toggle-btn {
     display: flex;
@@ -291,7 +549,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: inherit;
 }
 
-.text-content ul, .text-content ol {
+.text-content ul,
+.text-content ol {
     padding-left: 1.5rem;
 }
 
@@ -305,11 +564,23 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* Responsive */
 @media (max-width: 768px) {
-    #sidebar { position: fixed; height: 100%; z-index: 1001; transform: translateX(-100%); }
-    .app-layout.sidebar-open #sidebar { transform: translateX(0); }
+    #sidebar {
+        position: fixed;
+        height: 100%;
+        z-index: 1001;
+        transform: translateX(-100%);
+    }
+
+    .app-layout.sidebar-open #sidebar {
+        transform: translateX(0);
+    }
+
     /* The button is now always visible, so this rule is not needed anymore */
-    .app-layout.sidebar-collapsed #sidebar { transform: translateX(-100%); }
+    .app-layout.sidebar-collapsed #sidebar {
+        transform: translateX(-100%);
+    }
 }
+
 /* =================================================================
    CSS ĐÃ CÓ VÀ ĐÃ LÀM ĐÚNG THEO YÊU CẦU CỦA BẠN
    ================================================================= */
@@ -458,6 +729,7 @@ video.chat-media {
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -475,14 +747,18 @@ video.chat-media {
 
 /* Khối <pre> bên trong, có thể CUỘN */
 .code-wrapper pre {
-    max-height: 300px; /* Ví dụ: Giới hạn chiều cao để khối code có thể cuộn dọc */
-    overflow: auto;    /* Quan trọng: Tạo thanh cuộn khi nội dung vượt quá kích thước */
+    max-height: 300px;
+    /* Ví dụ: Giới hạn chiều cao để khối code có thể cuộn dọc */
+    overflow: auto;
+    /* Quan trọng: Tạo thanh cuộn khi nội dung vượt quá kích thước */
     /* overflow-x: auto; nếu chỉ muốn cuộn ngang */
     /* overflow-y: auto; nếu chỉ muốn cuộn dọc */
 
-    padding-top: 2.5em !important; /* Đủ chỗ cho nút copy */
+    padding-top: 2.5em !important;
+    /* Đủ chỗ cho nút copy */
     margin: 0 !important;
-    background-color: #2d2d2d; /* Ví dụ màu nền cho code */
+    background-color: #2d2d2d;
+    /* Ví dụ màu nền cho code */
     color: #f8f8f2;
     padding: 1.2em;
     border-radius: 6px;
@@ -490,7 +766,8 @@ video.chat-media {
 
 /* Nút Copy, cố định trong wrapper, KHÔNG CUỘN cùng nội dung pre */
 .copy-btn {
-    position: absolute; /* Quan trọng: Đặt tuyệt đối trong .code-wrapper */
+    position: absolute;
+    /* Quan trọng: Đặt tuyệt đối trong .code-wrapper */
     top: 8px;
     right: 8px;
     display: flex;
@@ -505,7 +782,8 @@ video.chat-media {
     font-size: 13px;
     opacity: 0;
     transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
-    z-index: 10; /* Đảm bảo nút nằm trên code nếu có trường hợp che phủ */
+    z-index: 10;
+    /* Đảm bảo nút nằm trên code nếu có trường hợp che phủ */
 }
 
 /* Các style khác cho nút và hover */
